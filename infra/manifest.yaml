@@ -1,0 +1,15 @@
+name: fastapi-on-azure-functions
+version: 1.0.0
+summary: Function App
+description: Deploy fast api application to Azure Functions
+runner: ARM
+templatePath: azuredeploy.json
+
+parameters:
+  - id: environmentName
+    name: environmentName
+    description: 'Name of the Environment'
+    type: string
+    required: false
+    default: 'test'
+

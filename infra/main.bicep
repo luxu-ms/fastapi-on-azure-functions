@@ -1,42 +1,32 @@
-targetScope = 'subscription'
-
 @minLength(1)
 @maxLength(64)
 @description('Name which is used to generate a short unique hash for each resource')
-param name string
+param environmentName string = 'test'
 
 @minLength(1)
 @description('Primary location for all resources')
-param location string
+param location string = resourceGroup().location
 
-var resourceToken = toLower(uniqueString(subscription().id, name, location))
-var tags = { 'azd-env-name': name }
+var resourceToken = toLower(uniqueString(resourceGroup().id, location))
+var tags = { 'azd-env-name': environmentName }
 
-resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: '${name}-rg'
-  location: location
-  tags: tags
-}
-
-var prefix = '${name}-${resourceToken}'
-var appInsightsName = '${prefix}-appinsights'
-var appServicePlanName = '${prefix}-plan'
+var prefix = '${environmentName}-${resourceToken}'
+var appInsightsName = 'appi-${prefix}'
+var appServicePlanName = 'plan-${prefix}'
 
 module monitoring './core/monitor/monitoring.bicep' = {
   name: 'monitoring'
-  scope: resourceGroup
   params: {
     location: location
     tags: tags
-    logAnalyticsName: '${prefix}-logworkspace'
+    logAnalyticsName: 'log-${prefix}'
     applicationInsightsName: appInsightsName
-    applicationInsightsDashboardName: '${prefix}-appinsights-dashboard'
+    applicationInsightsDashboardName: 'dash-${prefix}'
   }
 }
 
 module storageAccount 'core/storage/storage-account.bicep' = {
   name: 'storage'
-  scope: resourceGroup
   params: {
     name: '${toLower(take(replace(prefix, '-', ''), 17))}storage'
     location: location
@@ -46,7 +36,6 @@ module storageAccount 'core/storage/storage-account.bicep' = {
 
 module appServicePlan './core/host/appserviceplan.bicep' = {
   name: 'appserviceplan'
-  scope: resourceGroup
   params: {
     name: appServicePlanName
     location: location
@@ -60,9 +49,8 @@ module appServicePlan './core/host/appserviceplan.bicep' = {
 
 module functionApp 'core/host/functions.bicep' = {
   name: 'function'
-  scope: resourceGroup
   params: {
-    name: '${prefix}-function-app'
+    name: 'func-${prefix}'
     location: location
     tags: union(tags, { 'azd-service-name': 'api' })
     alwaysOn: false
